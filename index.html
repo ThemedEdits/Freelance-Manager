@@ -1,19 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-  <title>Freelancer Manager - Modern Dashboard</title>
-  <link rel="stylesheet" href="./css/style.css">
+  <!-- Basic SEO -->
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freelancer Manager | Client & Project Management Tool</title>
+  <meta name="description"
+    content="Freelancer Manager helps you manage clients, projects, payments, and pending invoices in one premium dashboard. Built for freelancers and local designers.">
+  <meta name="keywords"
+    content="freelancer manager, client management tool, project tracker, invoice tracker, freelance dashboard, graphic designer tool">
+  <meta name="author" content="Your Name">
+
+  <!-- Open Graph (WhatsApp / Facebook Preview) -->
+  <meta property="og:title" content="Freelancer Manager - Smart Client & Project Management">
+  <meta property="og:description"
+    content="Manage clients, projects, payments, and track pending dues effortlessly with a premium dashboard built for freelancers.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://freelancer-manager.vercel.app/">
+  <meta property="og:image" content="https://freelancer-manager.vercel.app/preview-image.jpg">
+
+  <!-- Twitter Preview -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Freelancer Manager Dashboard">
+  <meta name="twitter:description" content="Track clients, projects & payments in one powerful dashboard.">
+  <meta name="twitter:image" content="https://freelancer-manager.vercel.app/preview-image.jpg">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <!-- <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"> -->
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="./css/style.css">
+
+  <!-- Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Theme Color (Mobile Browser Bar Color) -->
+  <meta name="theme-color" content="#0f1117">
 </head>
+
 <body>
 
-  <div class="login-container">
-    <h1><i class="fas fa-rocket"></i> Freelancer Manager</h1>
-    <button id="googleLogin"><i class="fab fa-google"></i> Continue with Google</button>
-  </div>
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>
+        <i class="fas fa-rocket"></i> Freelancer Manager
+      </h1>
+      <p class="tagline">
+        Smart Client & Project Management for Freelancers
+      </p>
+      <p class="description">
+        Track your clients, manage projects, monitor payments, and never miss pending dues again.
+        A premium dashboard built specifically for freelancers and local designers.
+      </p>
 
+      <button id="googleLogin" class="hero-btn">
+        <i class="fab fa-google"></i> Continue with Google
+      </button>
+    </div>
+  </section>
+
+  <!-- FEATURES SECTION -->
+  <section class="features">
+    <h2>Everything You Need To Stay Organized</h2>
+
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <i class="fas fa-users"></i>
+        <h3>Client Management</h3>
+        <p>Keep a complete record of all your clients and their project history.</p>
+      </div>
+
+      <div class="feature-card">
+        <i class="fas fa-folder-open"></i>
+        <h3>Project Tracking</h3>
+        <p>Organize projects under each client with pricing and timelines.</p>
+      </div>
+
+      <div class="feature-card">
+        <i class="fas fa-rupee-sign"></i>
+        <h3>Payment Monitoring</h3>
+        <p>Track paid and unpaid amounts so you always know your pending dues.</p>
+      </div>
+
+      <div class="feature-card">
+        <i class="fas fa-chart-line"></i>
+        <h3>Dashboard Overview</h3>
+        <p>Get a clear financial snapshot of your freelance business.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2026 Freelancer Manager. Built for freelancers.</p>
+  </footer>
+
+  <!-- Firebase Scripts -->
   <script type="module" src="./js/firebase.js"></script>
   <script type="module" src="./js/auth.js"></script>
+
 </body>
+
 </html>

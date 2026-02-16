@@ -87,7 +87,7 @@ body {
 }
 
 #googleLogin {
-  background: white;
+  background: var(--dark-elevated);
   color: var(--text-primary);
   border: none;
   padding: 0.875rem 2.5rem;
@@ -109,9 +109,100 @@ body {
 }
 
 #googleLogin:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
+  background: var(--border-color);
 }
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.hero-content {
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.tagline {
+  font-size: 1.25rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.description {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.hero-btn {
+  background: var(--primary-color);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.hero-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.features {
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.features h2 {
+  margin-bottom: 50px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 30px;
+}
+
+.feature-card {
+  background: var(--dark-surface);
+  padding: 30px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  transition: 0.3s ease;
+}
+
+.feature-card i {
+  font-size: 2rem;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+footer {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 
 /* Navbar */
 .navbar {
