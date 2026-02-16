@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Dashboard - Freelancer Manager</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="logo"><i class="fas fa-rocket"></i> Freelancer Manager</div>
+
+        <div class="profile">
+            <img id="userPhoto" alt="Profile" />
+            <span id="userName"></span>
+            <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+
+        <div class="stats">
+            <div class="card">
+                <h3><i class="fas fa-users"></i> Total Clients</h3>
+                <p id="totalClients">0</p>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-project-diagram"></i> Total Projects</h3>
+                <p id="totalProjects">0</p>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-rupee-sign"></i> Total Earnings</h3>
+                <p id="totalEarnings">Rs 0</p>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-clock"></i> Pending Payments</h3>
+                <p id="pendingPayments">Rs 0</p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="addClientBtn"><i class="fas fa-user-plus"></i> Add Client</button>
+            <button id="addProjectBtn"><i class="fas fa-plus-circle"></i> Add Project</button>
+        </div>
+
+        <div class="filters">
+            <input type="text" id="searchInput" placeholder="Search client or project..." />
+
+            <select id="statusFilter" style="display: none;">
+                <option value="All" data-icon="fa-list-ul">All Status</option>
+                <option value="Pending" data-icon="fa-clock">Pending</option>
+                <option value="In Progress" data-icon="fa-spinner">In Progress</option>
+                <option value="Completed" data-icon="fa-check-circle">Completed</option>
+                <option value="Delivered" data-icon="fa-box">Delivered</option>
+            </select>
+
+            <select id="paymentFilter" style="display: none;">
+                <option value="All" data-icon="fa-list-ul">All Payments</option>
+                <option value="Paid" data-icon="fa-check-circle">Paid</option>
+                <option value="Unpaid" data-icon="fa-clock">Unpaid</option>
+            </select>
+        </div>
+
+        <div id="clientsContainer" class="clients-grid"></div>
+
+    </div>
+
+    <!-- Side Panel - Add Client -->
+    <div id="clientPanel" class="side-panel">
+        <div class="panel-content">
+            <h2><i class="fas fa-user-plus"></i> Add New Client</h2>
+
+            <input type="text" id="clientName" placeholder="Client Name *" />
+            <input type="text" id="clientPhone" placeholder="Phone / WhatsApp" />
+            <input type="email" id="clientEmail" placeholder="Email (optional)" />
+            <textarea id="clientNotes" placeholder="Notes about client"></textarea>
+
+            <button id="saveClient"><i class="fas fa-save"></i> Save Client</button>
+            <button id="closePanel" class="close-btn"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+    </div>
+
+    <!-- Side Panel - Add Project -->
+    <div id="projectPanel" class="side-panel">
+        <div class="panel-content">
+            <h2><i class="fas fa-plus-circle"></i> Add New Project</h2>
+
+            <select id="projectClient">
+                <option value="">Select a client...</option>
+            </select>
+
+            <input type="text" id="projectTitle" placeholder="Project Title *" />
+            <input type="number" id="projectTotal" placeholder="Total Price (Rs) *" />
+            <input type="number" id="projectAdvance" placeholder="Advance Received (Rs)" />
+            <input type="date" id="projectDeadline" />
+
+            <select id="projectStatus" style="display: none;">
+                <option value="Pending" data-icon="fa-clock">Pending</option>
+                <option value="In Progress" data-icon="fa-spinner">In Progress</option>
+                <option value="Completed" data-icon="fa-check-circle">Completed</option>
+                <option value="Delivered" data-icon="fa-box">Delivered</option>
+            </select>
+
+            <button id="saveProject"><i class="fas fa-save"></i> Save Project</button>
+            <button id="closeProjectPanel" class="close-btn"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+    </div>
+
+    <script type="module" src="./js/dashboard.js"></script>
+</body>
+
+</html>
