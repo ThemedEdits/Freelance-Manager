@@ -167,7 +167,7 @@ class CustomDropdown {
     if (option) {
       this.select.value = value;
       this.selectedValue = value;
-      
+
       this.selected.innerHTML = `
         <i class="fas ${option.dataset.icon || 'fa-circle'}"></i>
         <span>${option.text}</span>
@@ -367,7 +367,7 @@ closePanel.onclick = () => clientPanel.classList.remove("active");
 addProjectBtn.onclick = async () => {
   // Reset editing mode
   editingProjectId = null;
-  
+
   projectPanel.classList.add("active");
   await loadClientOptions();
 
@@ -626,9 +626,9 @@ async function editProject(projectId) {
       where("__name__", "==", projectId),
       where("userId", "==", currentUser.uid)
     );
-    
+
     const snap = await getDocs(projectQuery);
-    
+
     if (snap.empty) {
       await Popup.error("Project not found");
       return;
@@ -636,30 +636,30 @@ async function editProject(projectId) {
 
     const projectDoc = snap.docs[0];
     const projectData = projectDoc.data();
-    
+
     // Set editing mode
     editingProjectId = projectId;
-    
+
     // Load client options first
     await loadClientOptions();
-    
+
     // Pre-fill the form
     projectClient.value = projectData.clientId;
     document.getElementById("projectTitle").value = projectData.title || '';
     document.getElementById("projectTotal").value = projectData.totalPrice || '';
     document.getElementById("projectAdvance").value = projectData.advance || 0;
     document.getElementById("projectDeadline").value = projectData.deadline || '';
-    
+
     // Set status dropdown
     const statusSelect = document.getElementById("projectStatus");
     statusSelect.value = projectData.status || 'Pending';
     if (projectStatusDropdown) {
       projectStatusDropdown.setValue(projectData.status || 'Pending');
     }
-    
+
     // Open panel
     projectPanel.classList.add("active");
-    
+
   } catch (error) {
     await Popup.error("Error loading project: " + error.message);
   }
@@ -849,9 +849,10 @@ async function getImageDimensions(base64) {
 
 
 
-async function generateInvoicePDF(client, projects) {
+async function generateInvoicePDF(client, projects, preview = false) {
+
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   const invoiceNumber = "INV-" + Date.now().toString().slice(-6);
   const today = new Date().toLocaleDateString();
@@ -861,7 +862,7 @@ async function generateInvoicePDF(client, projects) {
   let totalRemaining = 0;
 
   // =========================
-  // LOAD IMAGES
+  // IMAGE LOADER
   // =========================
 
   async function loadImageAsBase64(url) {
@@ -874,84 +875,83 @@ async function generateInvoicePDF(client, projects) {
     });
   }
 
+  async function getImageDimensions(base64) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+      };
+      img.src = base64;
+    });
+  }
+
   const logoBase64 = await loadImageAsBase64("logo.png");
   const signatureBase64 = await loadImageAsBase64("signature.png");
+  const meezanLogo = await loadImageAsBase64("meezan.png");
+  const easypaisaLogo = await loadImageAsBase64("Easypaisa-logo-2.png");
 
   // =========================
   // HEADER BAR
   // =========================
 
-  doc.setFillColor(15, 23, 42); // dark navy
-  doc.rect(0, 0, 210, 12, "F");
+  doc.setFillColor(18, 18, 32);
+  doc.rect(0, 0, 210, 15, "F");
 
   // =========================
-  // WATERMARK (FADED LOGO)
-  // =========================
-
-  doc.setGState(new doc.GState({ opacity: 0.04 }));
-  doc.addImage(logoBase64, "PNG", 40, 80, 130, 130);
-  doc.setGState(new doc.GState({ opacity: 1 }));
-
-  // =========================
-  // LOGO (TOP LEFT)
+  // LOGO TOP LEFT
   // =========================
 
   const logoDims = await getImageDimensions(logoBase64);
-
-  const logoWidth = 20; // fixed width
+  const logoWidth = 28;
   const logoHeight = (logoDims.height / logoDims.width) * logoWidth;
 
-  doc.addImage(logoBase64, "PNG", 14, 18, logoWidth, logoHeight);
-
+  doc.addImage(logoBase64, "PNG", 15, 20, logoWidth, logoHeight);
 
   // =========================
-  // INVOICE INFO (TOP RIGHT)
+  // INVOICE INFO TOP RIGHT
   // =========================
 
-  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("INVOICE", 150, 25);
+  doc.setFontSize(22);
+  doc.text("INVOICE", 195, 28, { align: "right" });
 
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  doc.text(`Invoice No: ${invoiceNumber}`, 150, 33);
-  doc.text(`Date: ${today}`, 150, 39);
+  doc.text(`Invoice #: ${invoiceNumber}`, 195, 36, { align: "right" });
+  doc.text(`Date: ${today}`, 195, 42, { align: "right" });
 
   // =========================
   // BUSINESS INFO
   // =========================
 
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Themed Edits", 14, 45);
+  doc.text("Themed Edits", 15, 55);
 
   doc.setFont("helvetica", "normal");
-  doc.text("Freelance Digital Services", 14, 51);
-  doc.text("Email: themed.edits.co@gmail.com", 14, 57);
+  doc.text("Freelance Digital Services", 15, 62);
+  doc.text("Email: themed.edits.co@gmail.com", 15, 68);
 
-  doc.line(14, 63, 195, 63);
+  doc.line(15, 75, 195, 75);
 
   // =========================
-  // CLIENT SECTION
+  // CLIENT INFO
   // =========================
 
   doc.setFont("helvetica", "bold");
-  doc.text("Bill To:", 14, 73);
+  doc.text("Bill To", 15, 85);
 
   doc.setFont("helvetica", "normal");
-  doc.text(client.name || "", 14, 81);
-  doc.text(client.email || "N/A", 14, 87);
-  doc.text(client.phone || "N/A", 14, 93);
-
-  if (client.notes) {
-    doc.text("Notes: " + client.notes, 14, 99);
-  }
+  doc.text(client.name || "", 15, 92);
+  doc.text(client.email || "N/A", 15, 98);
+  doc.text(client.phone || "N/A", 15, 104);
 
   // =========================
   // PROJECT TABLE
   // =========================
 
   const tableData = projects.map(project => {
+
     const total = Number(project.totalPrice) || 0;
     const advance = Number(project.advance) || 0;
     const remaining = Number(project.remaining) || 0;
@@ -963,21 +963,20 @@ async function generateInvoicePDF(client, projects) {
     return [
       project.title || "",
       project.status || "",
-      "Rs " + total,
-      "Rs " + advance,
-      "Rs " + remaining
+      "Rs " + total.toLocaleString(),
+      "Rs " + advance.toLocaleString(),
+      "Rs " + remaining.toLocaleString()
     ];
   });
 
   doc.autoTable({
-    startY: 110,
+    startY: 115,
     head: [["Project", "Status", "Total", "Advance", "Remaining"]],
     body: tableData,
     theme: "grid",
     headStyles: {
-      fillColor: [15, 23, 42],
-      textColor: 255,
-      fontStyle: "bold"
+      fillColor: [18, 18, 32],
+      textColor: 255
     },
     styles: {
       fontSize: 10,
@@ -985,66 +984,98 @@ async function generateInvoicePDF(client, projects) {
     }
   });
 
-  const finalY = doc.lastAutoTable.finalY + 10;
+  const finalY = doc.lastAutoTable.finalY + 12;
 
   // =========================
   // SUMMARY
   // =========================
 
   doc.setFont("helvetica", "bold");
-  doc.text("Summary", 14, finalY);
+  doc.text("Summary", 15, finalY);
 
   doc.setFont("helvetica", "normal");
-  doc.text(`Total Amount: Rs ${totalAmount}`, 14, finalY + 8);
-  doc.text(`Total Paid ( Advance ): Rs ${totalAdvance}`, 14, finalY + 14);
+  doc.text(`Total Amount: Rs ${totalAmount.toLocaleString()}`, 15, finalY + 8);
+  doc.text(`Total Paid: Rs ${totalAdvance.toLocaleString()}`, 15, finalY + 14);
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(200, 0, 0);
-  doc.text(`Total Remaining: Rs ${totalRemaining}`, 14, finalY + 22);
+  doc.text(`Total Remaining: Rs ${totalRemaining.toLocaleString()}`, 15, finalY + 22);
   doc.setTextColor(0, 0, 0);
 
   // =========================
-  // SIGNATURE + FOOTER (Same Horizontal Line)
+  // PAYMENT DETAILS SECTION
+  // =========================
+
+  const paymentY = finalY + 35;
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Payment Information", 15, paymentY);
+
+  // Divider line
+  doc.line(15, paymentY + 4, 195, paymentY + 4);
+
+  // ----- Meezan Bank -----
+
+  const meezanDims = await getImageDimensions(meezanLogo);
+  const bankLogoWidth = 14;
+  const bankLogoHeight = (meezanDims.height / meezanDims.width) * bankLogoWidth;
+
+  doc.addImage(meezanLogo, "PNG", 15, paymentY + 13, bankLogoWidth, bankLogoHeight);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Meezan Bank Limited", 40, paymentY + 16);
+  doc.text("Account Title: HAMMAD AHMED SARDAR", 40, paymentY + 22);
+  doc.text("Account Number: 99560111470100", 40, paymentY + 28);
+  doc.text("IBAN: PK09MEZN0099560111470100", 40, paymentY + 34);
+
+  // ----- Easypaisa -----
+
+  const easyDims = await getImageDimensions(easypaisaLogo);
+  const easyLogoWidth = 14;
+  const easyLogoHeight = (easyDims.height / easyDims.width) * easyLogoWidth;
+
+  doc.addImage(easypaisaLogo, "PNG", 15, paymentY + 43, easyLogoWidth, easyLogoHeight);
+
+  doc.text("Easypaisa Account Title: HAMMAD AHMED SARDAR", 40, paymentY + 46);
+  doc.text("Easypaisa Number: 0332-3954620", 40, paymentY + 52);
+
+  // =========================
+  // SIGNATURE
   // =========================
 
   const pageHeight = doc.internal.pageSize.height;
-  const lineY = pageHeight - 15; // same horizontal level
+  const signY = pageHeight - 30;
 
-  // ---- SIGNATURE TEXT (Right Side) ----
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-
-  const signatureText = "Authorized Signature";
-  const textWidth = doc.getTextWidth(signatureText);
-  const textX = 163; // right area position
-
-  doc.text(signatureText, textX, lineY);
-
-  // ---- SIGNATURE IMAGE (Centered Above Text) ----
   const signDims = await getImageDimensions(signatureBase64);
-
-  const signWidth = 25; // adjust if needed
+  const signWidth = 30;
   const signHeight = (signDims.height / signDims.width) * signWidth;
 
-  // Center image relative to text
-  const imageX = textX - (signWidth / 2) + (textWidth / 2);
-  const imageY = lineY - signHeight - 5;
+  doc.addImage(signatureBase64, "PNG", 150, signY - 20, signWidth, signHeight);
 
-  doc.addImage(signatureBase64, "PNG", imageX, imageY, signWidth, signHeight);
+  doc.setFontSize(10);
+  doc.text("Authorized Signature", 165, signY + 10, { align: "center" });
 
-  // ---- FOOTER TEXT (Left Side, Same Line) ----
+  // =========================
+  // FOOTER
+  // =========================
+
   doc.setFontSize(9);
   doc.text(
-    "Thank you for your business. Payment is due as per agreed terms.",
-    14,
-    lineY
+    "Thank you for your business. Kindly share payment confirmation after transfer.",
+    105,
+    pageHeight - 10,
+    { align: "center" }
   );
 
-
   // =========================
-  // SAVE FILE
+  // SAVE OR PREVIEW
   // =========================
 
-  const safeClientName = (client.name || "Client").trim();
-  doc.save(`${safeClientName} - ${invoiceNumber}.pdf`);
+  if (preview) {
+    window.open(doc.output("bloburl"));
+  } else {
+    const safeClientName = (client.name || "Client").trim();
+    doc.save(`${safeClientName} - ${invoiceNumber}.pdf`);
+  }
 }
