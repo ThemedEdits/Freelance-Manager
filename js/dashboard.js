@@ -160,6 +160,30 @@ class CustomDropdown {
       this.optionsContainer.appendChild(optionDiv);
     });
   }
+
+  // Method to set value programmatically
+  setValue(value) {
+    const option = Array.from(this.select.options).find(opt => opt.value === value);
+    if (option) {
+      this.select.value = value;
+      this.selectedValue = value;
+      
+      this.selected.innerHTML = `
+        <i class="fas ${option.dataset.icon || 'fa-circle'}"></i>
+        <span>${option.text}</span>
+        <i class="fas fa-chevron-down"></i>
+      `;
+
+      // Update selected class in dropdown options
+      const optionDivs = this.optionsContainer.querySelectorAll('.dropdown-option');
+      optionDivs.forEach(opt => {
+        opt.classList.remove('selected');
+        if (opt.dataset.value === value) {
+          opt.classList.add('selected');
+        }
+      });
+    }
+  }
 }
 
 // Custom Popup System
@@ -262,6 +286,7 @@ function showSkeleton() {
 
 let currentUser;
 let statusDropdown, paymentDropdown, projectStatusDropdown;
+let editingProjectId = null; // Track if we're editing a project
 
 const userName = document.getElementById("userName");
 const userPhoto = document.getElementById("userPhoto");
@@ -340,6 +365,9 @@ addClientBtn.onclick = () => {
 closePanel.onclick = () => clientPanel.classList.remove("active");
 
 addProjectBtn.onclick = async () => {
+  // Reset editing mode
+  editingProjectId = null;
+  
   projectPanel.classList.add("active");
   await loadClientOptions();
 
@@ -353,15 +381,14 @@ addProjectBtn.onclick = async () => {
   const statusSelect = document.getElementById("projectStatus");
   statusSelect.value = 'Pending';
   if (projectStatusDropdown) {
-    projectStatusDropdown.selected.innerHTML = `
-      <i class="fas fa-clock"></i>
-      <span>Pending</span>
-      <i class="fas fa-chevron-down"></i>
-    `;
+    projectStatusDropdown.setValue('Pending');
   }
 };
 
-closeProjectPanel.onclick = () => projectPanel.classList.remove("active");
+closeProjectPanel.onclick = () => {
+  projectPanel.classList.remove("active");
+  editingProjectId = null; // Reset editing mode
+};
 
 /* ---------------- SAVE CLIENT ---------------- */
 
@@ -394,7 +421,7 @@ saveClient.onclick = async () => {
   }
 };
 
-/* ---------------- SAVE PROJECT ---------------- */
+/* ---------------- SAVE PROJECT (ADD OR UPDATE) ---------------- */
 
 saveProject.onclick = async () => {
   const clientId = projectClient.value;
@@ -416,7 +443,7 @@ saveProject.onclick = async () => {
   }
 
   try {
-    await addDoc(collection(db, "projects"), {
+    const projectData = {
       clientId,
       clientName,
       title,
@@ -425,15 +452,25 @@ saveProject.onclick = async () => {
       remaining: total - advance,
       deadline,
       status,
-      userId: currentUser.uid,
-      createdAt: new Date()
-    });
+      userId: currentUser.uid
+    };
+
+    if (editingProjectId) {
+      // Update existing project
+      await updateDoc(doc(db, "projects", editingProjectId), projectData);
+      await Popup.success("Project updated successfully!");
+    } else {
+      // Add new project
+      projectData.createdAt = new Date();
+      await addDoc(collection(db, "projects"), projectData);
+      await Popup.success("Project added successfully!");
+    }
 
     projectPanel.classList.remove("active");
-    await Popup.success("Project added successfully!");
+    editingProjectId = null; // Reset editing mode
     loadAllData();
   } catch (error) {
-    await Popup.error("Error adding project: " + error.message);
+    await Popup.error("Error saving project: " + error.message);
   }
 };
 
@@ -525,13 +562,13 @@ async function loadAllData() {
         <p><i class="fas fa-envelope"></i> ${client.email || 'No email'}</p>
         <p><i class="fas fa-sticky-note"></i> ${client.notes || 'No notes'}</p>
         <div class="client-actions">
-  <button class="small-btn" data-invoice="${clientId}">
-    <i class="fas fa-file-invoice"></i> Generate Invoice
-  </button>
-  <button class="small-btn" data-delete-client="${clientId}">
-    <i class="fas fa-trash"></i> Delete Client
-  </button>
-</div>
+          <button class="small-btn" data-invoice="${clientId}">
+            <i class="fas fa-file-invoice"></i> Generate Invoice
+          </button>
+          <button class="small-btn" data-delete-client="${clientId}">
+            <i class="fas fa-trash"></i> Delete Client
+          </button>
+        </div>
 
         <div class="projects-section"></div>
       `;
@@ -581,6 +618,53 @@ async function loadAllData() {
 
 /* ---------------- ACTION HANDLERS ---------------- */
 
+async function editProject(projectId) {
+  try {
+    // Fetch project data
+    const projectQuery = query(
+      collection(db, "projects"),
+      where("__name__", "==", projectId),
+      where("userId", "==", currentUser.uid)
+    );
+    
+    const snap = await getDocs(projectQuery);
+    
+    if (snap.empty) {
+      await Popup.error("Project not found");
+      return;
+    }
+
+    const projectDoc = snap.docs[0];
+    const projectData = projectDoc.data();
+    
+    // Set editing mode
+    editingProjectId = projectId;
+    
+    // Load client options first
+    await loadClientOptions();
+    
+    // Pre-fill the form
+    projectClient.value = projectData.clientId;
+    document.getElementById("projectTitle").value = projectData.title || '';
+    document.getElementById("projectTotal").value = projectData.totalPrice || '';
+    document.getElementById("projectAdvance").value = projectData.advance || 0;
+    document.getElementById("projectDeadline").value = projectData.deadline || '';
+    
+    // Set status dropdown
+    const statusSelect = document.getElementById("projectStatus");
+    statusSelect.value = projectData.status || 'Pending';
+    if (projectStatusDropdown) {
+      projectStatusDropdown.setValue(projectData.status || 'Pending');
+    }
+    
+    // Open panel
+    projectPanel.classList.add("active");
+    
+  } catch (error) {
+    await Popup.error("Error loading project: " + error.message);
+  }
+}
+
 function attachProjectActions() {
   document.querySelectorAll("[data-pay]").forEach(btn => {
     btn.onclick = async () => {
@@ -626,18 +710,7 @@ function attachProjectActions() {
 
   document.querySelectorAll("[data-edit]").forEach(btn => {
     btn.onclick = async () => {
-      const id = btn.dataset.edit;
-      const newTitle = prompt("Enter new project title:");
-      if (!newTitle) return;
-
-      try {
-        await updateDoc(doc(db, "projects", id), {
-          title: newTitle
-        });
-        loadAllData();
-      } catch (error) {
-        await Popup.error("Error updating project: " + error.message);
-      }
+      await editProject(btn.dataset.edit);
     };
   });
 }
@@ -745,6 +818,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     clientPanel.classList.remove('active');
     projectPanel.classList.remove('active');
+    editingProjectId = null;
   }
 });
 
@@ -755,6 +829,7 @@ document.addEventListener('click', (e) => {
   }
   if (!projectPanel.contains(e.target) && !addProjectBtn.contains(e.target) && projectPanel.classList.contains('active')) {
     projectPanel.classList.remove('active');
+    editingProjectId = null;
   }
 });
 
@@ -973,4 +1048,3 @@ async function generateInvoicePDF(client, projects) {
   const safeClientName = (client.name || "Client").trim();
   doc.save(`${safeClientName} - ${invoiceNumber}.pdf`);
 }
-
