@@ -854,12 +854,18 @@ async function generateInvoicePDF(client, projects, preview = false) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+
   const invoiceNumber = "INV-" + Date.now().toString().slice(-6);
   const today = new Date().toLocaleDateString();
 
   let totalAmount = 0;
   let totalAdvance = 0;
   let totalRemaining = 0;
+
+  // 🔥 CONTROL MAIN CONTENT SPACING HERE
+  const contentStartY = 58;
 
   // =========================
   // IMAGE LOADER
@@ -878,77 +884,159 @@ async function generateInvoicePDF(client, projects, preview = false) {
   async function getImageDimensions(base64) {
     return new Promise((resolve) => {
       const img = new Image();
-      img.onload = () => {
-        resolve({ width: img.width, height: img.height });
-      };
+      img.onload = () => resolve({ width: img.width, height: img.height });
       img.src = base64;
     });
   }
 
-  const logoBase64 = await loadImageAsBase64("logo.png");
+  const headerLogo = await loadImageAsBase64("header.png");
   const signatureBase64 = await loadImageAsBase64("signature.png");
   const meezanLogo = await loadImageAsBase64("meezan.png");
   const easypaisaLogo = await loadImageAsBase64("Easypaisa-logo-2.png");
 
   // =========================
-  // HEADER BAR
+  // HEADER (REPEATS)
   // =========================
 
-  doc.setFillColor(18, 18, 32);
-  doc.rect(0, 0, 210, 15, "F");
+  async function drawHeader() {
+    const headerHeightBar = 38;
+
+    doc.setFillColor(0, 0, 0);
+    doc.rect(0, 0, pageWidth, headerHeightBar, "F");
+
+    const headerDims = await getImageDimensions(headerLogo);
+    const logoWidth = 40;
+    const logoHeight = (headerDims.height / headerDims.width) * logoWidth;
+
+    // 🔥 Calculate total content height (logo + text lines + spacing)
+    const lineGap = 5;
+    const totalContentHeight = logoHeight + 2 + 9 + 9;
+    // 2 = gap under logo
+    // 9 = Freelance Digital Services
+    // 9 = Email + Phone combined height approx
+
+    // 🔥 Center the whole block vertically inside header bar
+    const visualOffset = 3; // try 2 or 3 if needed
+    const contentStartY = (headerHeightBar - totalContentHeight) / 2 + visualOffset;
+
+
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = contentStartY;
+
+    doc.addImage(headerLogo, "PNG", logoX, logoY, logoWidth, logoHeight);
+
+    const textStartY = logoY + logoHeight + 3;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(255);
+    doc.text("Freelance Digital Services", pageWidth / 2, textStartY, { align: "center" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(240, 240, 240);
+    doc.text("Email: themed.edits.co@gmail.com", pageWidth / 2, textStartY + 5, { align: "center" });
+    doc.text("Phone : +92 332 3954630", pageWidth / 2, textStartY + 10, { align: "center" });
+
+    doc.setTextColor(0);
+  }
+
 
   // =========================
-  // LOGO TOP LEFT
+  // FOOTER (REPEATS)
   // =========================
 
-  const logoDims = await getImageDimensions(logoBase64);
-  const logoWidth = 28;
-  const logoHeight = (logoDims.height / logoDims.width) * logoWidth;
+  function drawFooter(pageNumber, totalPages) {
 
-  doc.addImage(logoBase64, "PNG", 15, 20, logoWidth, logoHeight);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+
+    // Fixed: Set consistent line color for all pages
+    doc.setDrawColor(120, 120, 120);
+    doc.setLineWidth(0.5);
+    doc.line(15, pageHeight - 20, pageWidth - 15, pageHeight - 20);
+
+    doc.text(
+      "Thank you for your business. Kindly share payment confirmation after transfer.",
+      pageWidth / 2,
+      pageHeight - 13,
+      { align: "center" }
+    );
+
+    doc.text(
+      `Page ${pageNumber} of ${totalPages}`,
+      pageWidth - 15,
+      pageHeight - 7,
+      { align: "right" }
+    );
+
+    doc.setTextColor(0);
+  }
 
   // =========================
-  // INVOICE INFO TOP RIGHT
+  // START FIRST PAGE
   // =========================
+
+  await drawHeader();
+
+  // =========================
+  // ENHANCED CLIENT SECTION (LEFT) - FIXED MARGINS
+  // =========================
+
+  // Add light background for client section - kept within margins
+  doc.setFillColor(245, 247, 250);
+  doc.rect(15, contentStartY - 5, 80, 28, "F"); // Changed from 10 to 15 (left margin)
+
+  // Add subtle border
+  doc.setDrawColor(200, 210, 220);
+  doc.setLineWidth(0.5);
+  doc.rect(15, contentStartY - 5, 80, 28, "S"); // Changed from 10 to 15
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.text("INVOICE", 195, 28, { align: "right" });
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text("BILL TO :", 20, contentStartY); // Adjusted from 15 to 20
 
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.text(client.name || "", 20, contentStartY + 7); // Adjusted from 15 to 20
+
   doc.setFont("helvetica", "normal");
-  doc.text(`Invoice #: ${invoiceNumber}`, 195, 36, { align: "right" });
-  doc.text(`Date: ${today}`, 195, 42, { align: "right" });
+  doc.setFontSize(9);
+  doc.setTextColor(80);
+  doc.text(client.phone || "N/A", 20, contentStartY + 13); // Adjusted from 15 to 20
+  doc.text(client.email || "N/A", 20, contentStartY + 19); // Adjusted from 15 to 20
 
   // =========================
-  // BUSINESS INFO
+  // ENHANCED INVOICE DETAILS (RIGHT) - FIXED MARGINS
   // =========================
 
-  doc.setFontSize(12);
+  // Add light background for invoice details - kept within margins
+  doc.setFillColor(245, 247, 250);
+  doc.rect(pageWidth - 95, contentStartY - 5, 80, 28, "F"); // Changed width to 80 to match left side
+
+  // Add subtle border
+  doc.setDrawColor(200, 210, 220);
+  doc.setLineWidth(0.5);
+  doc.rect(pageWidth - 95, contentStartY - 5, 80, 28, "S"); // Changed width to 80
+
   doc.setFont("helvetica", "bold");
-  doc.text("Themed Edits", 15, 55);
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text("INVOICE DETAILS", pageWidth - 20, contentStartY, { align: "right" }); // Changed from -15 to -20
 
   doc.setFont("helvetica", "normal");
-  doc.text("Freelance Digital Services", 15, 62);
-  doc.text("Email: themed.edits.co@gmail.com", 15, 68);
-
-  doc.line(15, 75, 195, 75);
-
-  // =========================
-  // CLIENT INFO
-  // =========================
-
-  doc.setFont("helvetica", "bold");
-  doc.text("Bill To", 15, 85);
-
-  doc.setFont("helvetica", "normal");
-  doc.text(client.name || "", 15, 92);
-  doc.text(client.email || "N/A", 15, 98);
-  doc.text(client.phone || "N/A", 15, 104);
+  doc.setFontSize(9);
+  doc.setTextColor(80);
+  doc.text(`Invoice #: ${invoiceNumber}`, pageWidth - 20, contentStartY + 7, { align: "right" }); // Changed from -15 to -20
+  doc.text(`Date: ${today}`, pageWidth - 20, contentStartY + 13, { align: "right" }); // Changed from -15 to -20
 
   // =========================
   // PROJECT TABLE
   // =========================
+
+  const tableStartY = contentStartY + 35;
 
   const tableData = projects.map(project => {
 
@@ -970,106 +1058,181 @@ async function generateInvoicePDF(client, projects, preview = false) {
   });
 
   doc.autoTable({
-    startY: 115,
+    startY: tableStartY,
     head: [["Project", "Status", "Total", "Advance", "Remaining"]],
     body: tableData,
     theme: "grid",
+    margin: { left: 15, right: 15 },
     headStyles: {
-      fillColor: [18, 18, 32],
-      textColor: 255
+      fillColor: [0, 0, 0],
+      textColor: 255,
+      fontSize: 10,
+      fontStyle: 'bold'
     },
     styles: {
-      fontSize: 10,
+      fontSize: 9,
       cellPadding: 4
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 250]
+    },
+    // Add total row at the bottom
+    foot: [["", "", "", "", "Total Rs " + totalRemaining.toLocaleString()]],
+    footStyles: {
+      fillColor: [0, 0, 0],
+      textColor: 255,
+      fontSize: 10,
+      fontStyle: 'bold',
+      halign: 'right'
+    },
+    columnStyles: {
+      4: { halign: 'right' } // Right align the remaining column
     }
   });
 
-  const finalY = doc.lastAutoTable.finalY + 12;
+  let currentY = doc.lastAutoTable.finalY + 15;
 
   // =========================
-  // SUMMARY
+  // ENHANCED SUMMARY SECTION - FIXED VERTICAL ALIGNMENT
   // =========================
+
+  if (currentY > pageHeight - 80) {
+    doc.addPage();
+    await drawHeader();
+    currentY = contentStartY;
+  }
+
+  // Add background and border for summary section
+  doc.setFillColor(240, 244, 248);
+  doc.rect(15, currentY - 5, pageWidth - 30, 34, "F"); // Adjusted width and added more height
+
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.5);
+  doc.rect(15, currentY - 5, pageWidth - 30, 34, "S"); // Adjusted width
 
   doc.setFont("helvetica", "bold");
-  doc.text("Summary", 15, finalY);
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text("SUMMARY", 20, currentY + 2); // Adjusted from 15 to 20
 
   doc.setFont("helvetica", "normal");
-  doc.text(`Total Amount: Rs ${totalAmount.toLocaleString()}`, 15, finalY + 8);
-  doc.text(`Total Paid: Rs ${totalAdvance.toLocaleString()}`, 15, finalY + 14);
+  doc.setFontSize(10);
+  doc.setTextColor(0);
+  doc.text(`Total Amount:`, 20, currentY + 9); // Adjusted Y position
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0);
+  doc.text(`Rs ${totalAmount.toLocaleString()}`, 55, currentY + 9); // Adjusted X and Y
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(0);
+  doc.text(`Total Paid:`, 20, currentY + 16); // Adjusted Y position
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 100, 0);
+  doc.text(`Rs ${totalAdvance.toLocaleString()}`, 55, currentY + 16); // Adjusted X and Y
+
+  // Add line above Total Remaining
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.line(20, currentY + 20, pageWidth - 25, currentY + 20); // Line from left to right margin
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(200, 0, 0);
-  doc.text(`Total Remaining: Rs ${totalRemaining.toLocaleString()}`, 15, finalY + 22);
-  doc.setTextColor(0, 0, 0);
+  doc.text(`Total Remaining:`, 20, currentY + 25); // Adjusted Y position
+  doc.text(`Rs ${totalRemaining.toLocaleString()}`, 55, currentY + 25); // Adjusted X and Y
+  doc.setTextColor(0);
+
+  currentY += 45; // Increased from 40 to give more space
 
   // =========================
-  // PAYMENT DETAILS SECTION
+  // PAYMENT SECTION
   // =========================
 
-  const paymentY = finalY + 35;
+  if (currentY > pageHeight - 90) {
+    doc.addPage();
+    await drawHeader();
+    currentY = contentStartY;
+  }
 
   doc.setFont("helvetica", "bold");
-  doc.text("Payment Information", 15, paymentY);
-
-  // Divider line
-  doc.line(15, paymentY + 4, 195, paymentY + 4);
-
-  // ----- Meezan Bank -----
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Payment Information", 20, currentY); // Adjusted from 15 to 20
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.5);
+  doc.line(20, currentY + 4, pageWidth - 20, currentY + 4); // Adjusted margins
 
   const meezanDims = await getImageDimensions(meezanLogo);
-  const bankLogoWidth = 14;
-  const bankLogoHeight = (meezanDims.height / meezanDims.width) * bankLogoWidth;
+  const bankWidth = 14;
+  const bankHeight = (meezanDims.height / meezanDims.width) * bankWidth;
 
-  doc.addImage(meezanLogo, "PNG", 15, paymentY + 13, bankLogoWidth, bankLogoHeight);
+  doc.addImage(meezanLogo, "PNG", 20, currentY + 13, bankWidth, bankHeight); // Adjusted from 15 to 20
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("Meezan Bank Limited", 45, currentY + 16); // Adjusted from 40 to 45
   doc.setFont("helvetica", "normal");
-  doc.text("Meezan Bank Limited", 40, paymentY + 16);
-  doc.text("Account Title: HAMMAD AHMED SARDAR", 40, paymentY + 22);
-  doc.text("Account Number: 99560111470100", 40, paymentY + 28);
-  doc.text("IBAN: PK09MEZN0099560111470100", 40, paymentY + 34);
-
-  // ----- Easypaisa -----
+  doc.text("Account Title: HAMMAD AHMED SARDAR", 45, currentY + 22); // Adjusted from 40 to 45
+  doc.text("Account Number: 99560111470100", 45, currentY + 28); // Adjusted from 40 to 45
+  doc.text("IBAN: PK09MEZN0099560111470100", 45, currentY + 34); // Adjusted from 40 to 45
 
   const easyDims = await getImageDimensions(easypaisaLogo);
-  const easyLogoWidth = 14;
-  const easyLogoHeight = (easyDims.height / easyDims.width) * easyLogoWidth;
+  const easyHeight = (easyDims.height / easyDims.width) * bankWidth;
 
-  doc.addImage(easypaisaLogo, "PNG", 15, paymentY + 43, easyLogoWidth, easyLogoHeight);
+  doc.addImage(easypaisaLogo, "PNG", 20, currentY + 43, bankWidth, easyHeight); // Adjusted from 15 to 20
 
-  doc.text("Easypaisa Account Title: HAMMAD AHMED SARDAR", 40, paymentY + 46);
-  doc.text("Easypaisa Number: 0332-3954620", 40, paymentY + 52);
+  doc.setFont("helvetica", "bold");
+  doc.text("Easypaisa", 45, currentY + 46); // Adjusted from 40 to 45
+  doc.setFont("helvetica", "normal");
+  doc.text("Account Title: HAMMAD AHMED SARDAR", 45, currentY + 52); // Adjusted from 40 to 45
+  doc.text("Number: 0332-3954620", 45, currentY + 58); // Adjusted from 40 to 45
+
+  currentY += 75;
 
   // =========================
   // SIGNATURE
   // =========================
 
-  const pageHeight = doc.internal.pageSize.height;
-  const signY = pageHeight - 30;
+  // =========================
+  // SIGNATURE - MOVED TO BOTTOM OF LAST PAGE
+  // =========================
+
+  // Get the last page number
+  const totalPages = doc.getNumberOfPages();
+  doc.setPage(totalPages);
+
+  // Calculate position at bottom of page (above footer)
+  const footerHeight = 25; // Space reserved for footer
+  const signatureY = pageHeight - footerHeight - 26; // 25mm above footer
 
   const signDims = await getImageDimensions(signatureBase64);
-  const signWidth = 30;
+  const signWidth = 20;
   const signHeight = (signDims.height / signDims.width) * signWidth;
 
-  doc.addImage(signatureBase64, "PNG", 150, signY - 20, signWidth, signHeight);
+  doc.addImage(signatureBase64, "PNG", pageWidth - 55, signatureY, signWidth, signHeight);
 
-  doc.setFontSize(10);
-  doc.text("Authorized Signature", 165, signY + 10, { align: "center" });
-
-  // =========================
-  // FOOTER
-  // =========================
+  // Line above Authorized Signature
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.5);
+  doc.line(pageWidth - 65, signatureY + signHeight + 0, pageWidth - 25, signatureY + signHeight + 0);
 
   doc.setFontSize(9);
-  doc.text(
-    "Thank you for your business. Kindly share payment confirmation after transfer.",
-    105,
-    pageHeight - 10,
-    { align: "center" }
-  );
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100);
+  doc.text("Authorized Signature", pageWidth - 45, signatureY + signHeight + 4.5, { align: "center" });
+
 
   // =========================
-  // SAVE OR PREVIEW
+  // ADD FOOTERS TO ALL PAGES
+  // =========================
+
+
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    drawFooter(i, totalPages);
+  }
+
+  // =========================
+  // SAVE / PREVIEW
   // =========================
 
   if (preview) {
