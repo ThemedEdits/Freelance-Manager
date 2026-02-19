@@ -679,11 +679,20 @@ function attachProjectActions() {
 
         snap.forEach(async d => {
           const data = d.data();
-          const newRemaining = (data.remaining || 0) - Number(amount);
+
+          const totalPrice = Number(data.totalPrice) || 0;
+          const currentRemaining = Number(data.remaining) || 0;
+          const paymentAmount = Number(amount);
+
+          const newRemaining = Math.max(0, currentRemaining - paymentAmount);
+          const newAdvance = totalPrice - newRemaining;
+
           await updateDoc(projectRef, {
-            remaining: newRemaining < 0 ? 0 : newRemaining
+            remaining: newRemaining,
+            advance: newAdvance
           });
         });
+
 
         await Popup.success("Payment added successfully!");
         loadAllData();
@@ -852,7 +861,12 @@ async function getImageDimensions(base64) {
 async function generateInvoicePDF(client, projects, preview = false) {
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc = new jsPDF({
+    unit: "mm",
+    format: "a4",
+    compress: true
+  });
+
 
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
@@ -871,15 +885,33 @@ async function generateInvoicePDF(client, projects, preview = false) {
   // IMAGE LOADER
   // =========================
 
-  async function loadImageAsBase64(url) {
+  async function loadImageAsBase64(url, quality = 0.6) {
     const response = await fetch(url);
     const blob = await response.blob();
+
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Resize image (VERY IMPORTANT)
+        const maxWidth = 800; // adjust if needed
+        const scale = Math.min(1, maxWidth / img.width);
+
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Convert to JPEG with compression
+        const compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressedBase64);
+      };
+      img.src = URL.createObjectURL(blob);
     });
   }
+
 
   async function getImageDimensions(base64) {
     return new Promise((resolve) => {
@@ -923,7 +955,7 @@ async function generateInvoicePDF(client, projects, preview = false) {
     const logoX = (pageWidth - logoWidth) / 2;
     const logoY = contentStartY;
 
-    doc.addImage(headerLogo, "PNG", logoX, logoY, logoWidth, logoHeight);
+    doc.addImage(headerLogo, "JPEG", logoX, logoY, logoWidth, logoHeight);
 
     const textStartY = logoY + logoHeight + 3;
 
@@ -1165,7 +1197,7 @@ async function generateInvoicePDF(client, projects, preview = false) {
   const bankWidth = 14;
   const bankHeight = (meezanDims.height / meezanDims.width) * bankWidth;
 
-  doc.addImage(meezanLogo, "PNG", 20, currentY + 13, bankWidth, bankHeight); // Adjusted from 15 to 20
+  doc.addImage(meezanLogo, "JPEG", 20, currentY + 13, bankWidth, bankHeight); // Adjusted from 15 to 20
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
@@ -1178,7 +1210,7 @@ async function generateInvoicePDF(client, projects, preview = false) {
   const easyDims = await getImageDimensions(easypaisaLogo);
   const easyHeight = (easyDims.height / easyDims.width) * bankWidth;
 
-  doc.addImage(easypaisaLogo, "PNG", 20, currentY + 43, bankWidth, easyHeight); // Adjusted from 15 to 20
+  doc.addImage(easypaisaLogo, "JPEG", 20, currentY + 43, bankWidth, easyHeight); // Adjusted from 15 to 20
 
   doc.setFont("helvetica", "bold");
   doc.text("Easypaisa", 45, currentY + 46); // Adjusted from 40 to 45
@@ -1208,7 +1240,7 @@ async function generateInvoicePDF(client, projects, preview = false) {
   const signWidth = 20;
   const signHeight = (signDims.height / signDims.width) * signWidth;
 
-  doc.addImage(signatureBase64, "PNG", pageWidth - 55, signatureY, signWidth, signHeight);
+  doc.addImage(signatureBase64, "JPEG", pageWidth - 55, signatureY, signWidth, signHeight);
 
   // Line above Authorized Signature
   doc.setDrawColor(150, 150, 150);
