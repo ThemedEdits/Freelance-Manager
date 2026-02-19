@@ -19,6 +19,7 @@ if (loginBtn) {
 // Redirect if logged in
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    window.location.href = "/Dashboard/";
-  }
+  window.location.replace("/Dashboard/");
+}
+
 });

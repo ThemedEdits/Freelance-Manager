@@ -337,8 +337,9 @@ function initDropdowns() {
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
-    window.location.href = "index.html";
-  } else {
+  window.location.replace("../index.html");
+}
+ else {
     currentUser = user;
     userName.textContent = user.displayName;
     userPhoto.src = user.photoURL;
@@ -921,10 +922,10 @@ async function generateInvoicePDF(client, projects, preview = false) {
     });
   }
 
-  const headerLogo = await loadImageAsBase64("header.png");
-  const signatureBase64 = await loadImageAsBase64("signature.png");
-  const meezanLogo = await loadImageAsBase64("meezan.png");
-  const easypaisaLogo = await loadImageAsBase64("Easypaisa-logo-2.png");
+  const headerLogo = await loadImageAsBase64("/header.png");
+  const signatureBase64 = await loadImageAsBase64("/signature.png");
+  const meezanLogo = await loadImageAsBase64("/meezan.png");
+  const easypaisaLogo = await loadImageAsBase64("/Easypaisa-logo-2.png");
 
   // =========================
   // HEADER (REPEATS)
