@@ -969,7 +969,7 @@ async function generateInvoicePDF(client, projects, preview = false) {
     doc.setFontSize(9.5);
     doc.setTextColor(240, 240, 240);
     doc.text("Email: themed.edits.co@gmail.com", pageWidth / 2, textStartY + 5, { align: "center" });
-    doc.text("Phone : +92 332 3954630", pageWidth / 2, textStartY + 10, { align: "center" });
+    doc.text("Phone : +92 332 3954620", pageWidth / 2, textStartY + 10, { align: "center" });
 
     doc.setTextColor(0);
   }
